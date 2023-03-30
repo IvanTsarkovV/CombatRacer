@@ -17,8 +17,10 @@ void ACR_Jet::BeginPlay()
 	Super::BeginPlay();
 	check(BodyMeshComponent);
 
-	TrustSpeed = StartTrustSpeed;
-	CurrentSpeed = StartTrustSpeed;
+	ThrustSpeed = StartThrustSpeed;
+	CurrentSpeed = StartThrustSpeed;
+
+	BodyMeshComponent->OnComponentHit.AddDynamic(this, &ACR_Jet::OnJetHit);
 }
 
 // Called every frame
@@ -40,36 +42,26 @@ void ACR_Jet::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindAxis("RightLeft", this, &ACR_Jet::UpdateRoll);
 }
 
+void ACR_Jet::UpdateThrust(float Amount)
+{
+	const float NewThrustSpeed = Amount * FApp::GetDeltaTime() * ThrustMultiplier * ThrustAcceleration + ThrustSpeed;
+	ThrustSpeed = FMath::Clamp(NewThrustSpeed, MinThrustSpeed, MaxThrustSpeed);
+}
+
 void ACR_Jet::UpdatePosition(float DeltaTime)
 {
 	CalculateSpeed(DeltaTime);
-	
-	// const FVector2D InputRange = FVector2D(0.0f, MinTrustSpeed);
-	// const FVector2D OutputRange = FVector2D(Gravity, 0.0f);
-	// AppliedGravity = FMath::GetMappedRangeValueClamped(InputRange, OutputRange, CurrentSpeed);
-
-	FVector NewPosition = GetActorForwardVector() * (CurrentSpeed * DeltaTime);
-	// NewPosition.Z = NewPosition.Z - (AppliedGravity * DeltaTime);
-
+	// 	
+		// const FVector2D InputRange = FVector2D(0.0f, MinTrustSpeed);
+		// const FVector2D OutputRange = FVector2D(Gravity, 0.0f);
+		// AppliedGravity = FMath::GetMappedRangeValueClamped(InputRange, OutputRange, CurrentSpeed);
+	//
+	FVector NewPosition = GetActorForwardVector() * CurrentSpeed * DeltaTime;
+	// 	// NewPosition.Z = NewPosition.Z - (AppliedGravity * DeltaTime);
+	//
 	BodyMeshComponent->SetPhysicsLinearVelocity(NewPosition);
-	// AddActorWorldOffset(NewPosition, true);
-	
-}
-
-void ACR_Jet::UpdateThrust(float Amount)
-{
-	const float NewThrustSpeed = Amount * FApp::GetDeltaTime() * TrustMultiplier + TrustSpeed;
-	TrustSpeed = FMath::Clamp(NewThrustSpeed, MinTrustSpeed, MaxTrustSpeed);
-}
-
-void ACR_Jet::UpdateYaw(float Amount)
-{
-	const float DeltaTime = FApp::GetDeltaTime();
-	TargetYaw = Amount;
-	CurrentYaw = FMath::FInterpTo(CurrentYaw, TargetYaw, DeltaTime, RotationSpeed);
-
-	const float NewPosition = CurrentYaw * DeltaTime * RotationSpeed;
-	AddActorLocalRotation(FRotator(0.0f, NewPosition, 0.0f));
+	// 	// AddActorWorldOffset(NewPosition, true);
+	// 	
 }
 
 void ACR_Jet::UpdatePitch(float Amount)
@@ -87,29 +79,69 @@ void ACR_Jet::UpdateRoll(float Amount)
 	const float DeltaTime = FApp::GetDeltaTime();
 	TargetRoll = Amount;
 	CurrentRoll = FMath::FInterpTo(CurrentRoll, TargetRoll, DeltaTime, RotationSpeed);
-	
+
 	const float NewPosition = CurrentRoll * DeltaTime * RotationSpeed;
 	AddActorLocalRotation(FRotator(0.0f, 0.0f, NewPosition));
 }
 
+void ACR_Jet::OnJetHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+                       FVector NormalImpulse, const FHitResult& Hit)
+{
+	if (!GetWorld()) return;
+
+	const float AngleBetween = FVector::DotProduct(GetActorForwardVector(), Hit.Normal);
+	const float AngleBetweenDegrees = FMath::Abs(FMath::RadiansToDegrees(AngleBetween));
+
+	CalculateSpeedOnHit(AngleBetweenDegrees);
+}
+
+// void ACR_Jet::UpdateYaw(float Amount)
+// {
+// 	const float DeltaTime = FApp::GetDeltaTime();
+// 	TargetYaw = Amount;
+// 	CurrentYaw = FMath::FInterpTo(CurrentYaw, TargetYaw, DeltaTime, RotationSpeed);
+//
+// 	const float NewPosition = CurrentYaw * DeltaTime * RotationSpeed;
+// 	AddActorLocalRotation(FRotator(0.0f, NewPosition, 0.0f));
+// }
+
 void ACR_Jet::CalculateSpeed(float DeltaTime)
 {
-	CurrentSpeed = FMath::FInterpTo(CurrentSpeed, TrustSpeed, DeltaTime, Drag);
-	CurrentSpeedInKM = FMath::Abs(CurrentSpeed) * 0.00036f;
-	// if (TrustSpeed < CurrentSpeed)
-	// {
-	// 	CurrentSpeed = FMath::FInterpTo(CurrentSpeed, TrustSpeed, DeltaTime, Drag);
-	// }
-	// else
-	// {
-	// 	CurrentSpeed = TrustSpeed;
-	// }
+	if (ThrustSpeed < CurrentSpeed)
+	{
+		CurrentSpeed = FMath::FInterpTo(CurrentSpeed, ThrustSpeed, DeltaTime, Drag);
+	}
+	else
+	{
+		CurrentSpeed = ThrustSpeed;
+	}
+}
+
+void ACR_Jet::CalculateSpeedOnHit(float HitDegrees)
+{
+	if (!GetWorld()) return;
+	
+	if (HitDegrees > MaxAngleToDestroyOnHit)
+	{
+		StopSpeed();
+	}
+	else
+	{
+		const FVector2D InputRange = FVector2D(0.0f, MaxAngleToDestroyOnHit);
+		const FVector2D OutputRange = FVector2D(1, 0.0f);
+		const float SpeedModification = FMath::GetMappedRangeValueClamped(InputRange, OutputRange, HitDegrees);
+		ThrustSpeed = ThrustSpeed * SpeedModification;
+	}
+}
+
+void ACR_Jet::StopSpeed()
+{
+	ThrustSpeed = 0.0f;
+	CurrentSpeed = 0.0f;
 }
 
 void ACR_Jet::PrintVars()
 {
-	UE_LOG(LogJet, Display, TEXT("AppliedGravity: %f"), AppliedGravity);
 	UE_LOG(LogJet, Display, TEXT("CurrentSpeed: %f"), CurrentSpeed);
-	UE_LOG(LogJet, Display, TEXT("CurrentSpeedInKM: %f"), CurrentSpeedInKM);
-	UE_LOG(LogJet, Display, TEXT("TrustSpeed: %f"), TrustSpeed);
+	UE_LOG(LogJet, Display, TEXT("TrustSpeed: %f"), ThrustSpeed);
 }

@@ -17,25 +17,31 @@ public:
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category="Jet Movement")
-	float StartTrustSpeed = 100000.0;
+	float StartThrustSpeed = 0.0;
 	
 	UPROPERTY(EditDefaultsOnly, Category="Jet Movement")
-	float MaxTrustSpeed = 400000.0;
+	float MaxThrustSpeed = 800000.0;
 
 	UPROPERTY(EditDefaultsOnly, Category="Jet Movement")
-	float MinTrustSpeed = -100000.0f;
+	float MinThrustSpeed = -200000.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category="Jet Movement")
-	float TrustMultiplier = 80000.0f;
+	float ThrustAcceleration = 1.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category="Jet Movement")
-	float Gravity = 981.0f;
+	float ThrustMultiplier = 80000.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category="Jet Movement")
 	float Drag = 0.5f;
 
 	UPROPERTY(EditDefaultsOnly, Category="Jet Movement")
 	float RotationSpeed = 60.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category="Jet Damage")
+	float MaxAngleToDestroyOnHit = 40.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category="Jet Damage")
+	float MinSpeedToApplyDamage = 300000.0f;
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -47,26 +53,32 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 private:
-	float TrustSpeed = 0.0f;
+	//Thrust
+	float ThrustSpeed = 0.0f;
 	float CurrentSpeed = 0.0f;
-	float CurrentSpeedInKM = 0.0f;
-	float AppliedGravity = 0.0f;
 
 	//Rotation
-	float TargetYaw = 0.0f;
-	float CurrentYaw = 0.0f;
 	float TargetPitch = 0.0f;
 	float CurrentPitch = 0.0f;
 	float TargetRoll = 0.0f;
 	float CurrentRoll = 0.0f;
-	
-	void UpdatePosition(float DeltaTime);
+	// float TargetYaw = 0.0f;
+	// float CurrentYaw = 0.0f;
 	
 	void UpdateThrust(float Amount);
-	void UpdateYaw(float Amount);
+	void CalculateSpeed(float DeltaTime);
+	void CalculateSpeedOnHit(float HitDegrees);
+	void StopSpeed();
+
+	void UpdatePosition(float DeltaTime);
+	
 	void UpdatePitch(float Amount);
 	void UpdateRoll(float Amount);
+	// void UpdateYaw(float Amount);
 
-	void CalculateSpeed(float DeltaTime);
+	UFUNCTION()
+	void OnJetHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+						 FVector NormalImpulse, const FHitResult& Hit);
+
 	void PrintVars();
 };

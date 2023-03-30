@@ -14,17 +14,19 @@ ACR_BaseJet::ACR_BaseJet()
 	BodyMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>("BodyMeshComponent");
 	SetRootComponent(BodyMeshComponent);
 	BodyMeshComponent->SetSimulatePhysics(true);
-	BodyMeshComponent->SetLinearDamping(0.01f);
+	BodyMeshComponent->SetLinearDamping(0.5f);
 	BodyMeshComponent->SetAngularDamping(1.0f);
 	BodyMeshComponent->SetEnableGravity(false);
+	BodyMeshComponent->BodyInstance.bNotifyRigidBodyCollision = true;
 	
 	SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>("SpringArmComponent");
 	SpringArmComponent->SetupAttachment(BodyMeshComponent);
 	SpringArmComponent->TargetArmLength = 800.0f;
 	SpringArmComponent->SocketOffset = FVector(0.0f, 0.0f, 200.0f);
-	SpringArmComponent->bEnableCameraLag = false;
+	SpringArmComponent->bDoCollisionTest = false;
+	SpringArmComponent->bEnableCameraLag = true;
 	SpringArmComponent->bEnableCameraRotationLag = true;
-	SpringArmComponent->CameraLagSpeed = 10.0f;
+	SpringArmComponent->CameraLagSpeed = 4.0f;
 	SpringArmComponent->CameraRotationLagSpeed = 4.0f;
 
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>("CameraComponent");
