@@ -40,21 +40,31 @@ void ACR_Jet::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindAxis("Thrust", this, &ACR_Jet::UpdateThrust);
 	PlayerInputComponent->BindAxis("UpDown", this, &ACR_Jet::UpdatePitch);
 	PlayerInputComponent->BindAxis("RightLeft", this, &ACR_Jet::UpdateRoll);
+	PlayerInputComponent->BindAction("Boost", IE_Pressed, this, &ACR_Jet::BoostActivated);
 }
 
 void ACR_Jet::UpdateThrust(float Amount)
 {
-	const float NewThrustSpeed = Amount * FApp::GetDeltaTime() * ThrustMultiplier * ThrustAcceleration + ThrustSpeed;
-	ThrustSpeed = FMath::Clamp(NewThrustSpeed, MinThrustSpeed, MaxThrustSpeed);
+	float NewThrustSpeed = Amount * FApp::GetDeltaTime() * ThrustMultiplier * ThrustAcceleration;
+	float MaxSpeed = MaxThrustSpeed;
+	
+	if(SpeedBoostActivated)
+	{
+		NewThrustSpeed = NewThrustSpeed * ThrustMultiplierModificationOnBoost;
+		MaxSpeed = MaxThrustSpeed * MaxTrustModificationOnBoost;
+	}
+
+	NewThrustSpeed += ThrustSpeed;
+	ThrustSpeed = FMath::Clamp(NewThrustSpeed, MinThrustSpeed, MaxSpeed);
 }
 
 void ACR_Jet::UpdatePosition(float DeltaTime)
 {
 	CalculateSpeed(DeltaTime);
 	// 	
-		// const FVector2D InputRange = FVector2D(0.0f, MinTrustSpeed);
-		// const FVector2D OutputRange = FVector2D(Gravity, 0.0f);
-		// AppliedGravity = FMath::GetMappedRangeValueClamped(InputRange, OutputRange, CurrentSpeed);
+	// const FVector2D InputRange = FVector2D(0.0f, MinTrustSpeed);
+	// const FVector2D OutputRange = FVector2D(Gravity, 0.0f);
+	// AppliedGravity = FMath::GetMappedRangeValueClamped(InputRange, OutputRange, CurrentSpeed);
 	//
 	FVector NewPosition = GetActorForwardVector() * CurrentSpeed * DeltaTime;
 	// 	// NewPosition.Z = NewPosition.Z - (AppliedGravity * DeltaTime);
@@ -120,7 +130,7 @@ void ACR_Jet::CalculateSpeed(float DeltaTime)
 void ACR_Jet::CalculateSpeedOnHit(float HitDegrees)
 {
 	if (!GetWorld()) return;
-	
+
 	if (HitDegrees > MaxAngleToDestroyOnHit)
 	{
 		StopSpeed();
@@ -138,6 +148,20 @@ void ACR_Jet::StopSpeed()
 {
 	ThrustSpeed = 0.0f;
 	CurrentSpeed = 0.0f;
+}
+
+void ACR_Jet::BoostActivated()
+{
+	if (SpeedBoostActivated) return;
+	SpeedBoostActivated = true;
+
+	GetWorldTimerManager().SetTimer(SpeedBoostTimerHandle, this, &ACR_Jet::BoostStop, SpeedBoostTimer);
+}
+
+void ACR_Jet::BoostStop()
+{
+	SpeedBoostActivated = false;
+	UpdateThrust(0.0f);
 }
 
 void ACR_Jet::PrintVars()

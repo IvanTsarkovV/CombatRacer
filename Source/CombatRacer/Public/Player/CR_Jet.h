@@ -32,6 +32,15 @@ protected:
 	float ThrustMultiplier = 80000.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category="Jet Movement")
+	float ThrustMultiplierModificationOnBoost = 2.5f;
+
+	UPROPERTY(EditDefaultsOnly, Category="Jet Movement")
+	float MaxTrustModificationOnBoost = 1.5f;
+
+	UPROPERTY(EditDefaultsOnly, Category="Jet Movement")
+	float SpeedBoostTimer = 5.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category="Jet Movement")
 	float Drag = 0.5f;
 
 	UPROPERTY(EditDefaultsOnly, Category="Jet Movement")
@@ -56,6 +65,8 @@ private:
 	//Thrust
 	float ThrustSpeed = 0.0f;
 	float CurrentSpeed = 0.0f;
+	bool SpeedBoostActivated = false;
+	FTimerHandle SpeedBoostTimerHandle;
 
 	//Rotation
 	float TargetPitch = 0.0f;
@@ -69,6 +80,8 @@ private:
 	void CalculateSpeed(float DeltaTime);
 	void CalculateSpeedOnHit(float HitDegrees);
 	void StopSpeed();
+	void BoostActivated();
+	void BoostStop();
 
 	void UpdatePosition(float DeltaTime);
 	
